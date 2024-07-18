@@ -1,0 +1,246 @@
+./app.py:
+from flask import Flask
+from config import Config
+from models import db, Movie
+import csv
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    db.init_app(app)
+
+    with app.app_context():
+        db.create_all()
+        read_csv_and_insert_data()
+
+    from routes.main import main_bp
+    app.register_blueprint(main_bp)
+
+    return app
+
+def read_csv_and_insert_data():
+    db.session.query(Movie).delete()  # Limpa todos os registros existentes
+    with open('database/movielist.csv', newline='') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=';')  # Usa ';' como delimitador
+        for row in reader:
+            movie = Movie(
+                year=row['year'],
+                title=row['title'],
+                studios=row['studios'],
+                producers=row['producers'],
+                winner=row['winner']
+            )
+            db.session.add(movie)
+        db.session.commit()
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(debug=True)
+
+
+./config.py:
+class Config:
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+
+
+./deletar.py:
+import os
+
+def gerar_arquivo_txt(diretorio, arquivo_txt):
+  """
+  Gera um arquivo txt com o caminho e conteúdo de todos os arquivos .py no diretório especificado.
+
+  Argumentos:
+    diretorio: Caminho do diretório a ser analisado.
+    arquivo_txt: Nome do arquivo txt a ser gerado.
+  """
+  with open(arquivo_txt, "w") as f_saida:
+    for raiz, _, arquivos in os.walk(diretorio):
+      for arquivo in arquivos:
+        print(arquivo)
+        if arquivo.endswith(".py"):
+          caminho_arquivo = os.path.join(raiz, arquivo)
+          with open(caminho_arquivo, "r") as f_entrada:
+            conteudo = f_entrada.read()
+          f_saida.write(f"{caminho_arquivo}:\n{conteudo}\n\n")
+
+# Personalize as variáveis de acordo com sua necessidade
+diretorio = "."  # Altere para o diretório desejado
+arquivo_txt = "arquivo_principal.txt"  # Nome do arquivo txt a ser gerado
+
+gerar_arquivo_txt(diretorio, arquivo_txt)
+
+
+./models.py:
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+class Movie(db.Model):
+    __tablename__ = 'movies'
+
+    id = db.Column(db.Integer, primary_key=True, index=True)
+    year = db.Column(db.Integer, index=True)
+    title = db.Column(db.String, index=True)
+    studios = db.Column(db.String, index=True)
+    producers = db.Column(db.String, index=True)
+    winner = db.Column(db.String, index=True)
+
+
+./run.py:
+
+
+./routes/main.py:
+from flask import Blueprint, jsonify
+from models import db, Movie
+from services.user_service import get_producers_with_intervals
+
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/producers', methods=['GET'])
+def max_interval():
+    result = get_producers_with_intervals(db.session)
+    return jsonify(result)
+
+
+
+./routes/auth.py:
+
+
+./routes/__init__.py:
+
+
+./services/__init__.py:
+
+
+./services/auth_service.py:
+
+
+./services/user_service.py:
+from models import Movie
+from collections import defaultdict
+
+def get_producers_with_intervals(session):
+    producers = defaultdict(list)
+    movies = session.query(Movie).filter_by(winner='yes').all()
+
+    for movie in movies:
+        for producer in movie.producers.split(', '):
+            producers[producer].append(movie.year)
+
+    intervals = {"min": [], "max": []}
+    min_interval = float('inf')
+    max_interval = float('-inf')
+
+    for producer, years in producers.items():
+        if len(years) > 1:
+            years.sort()
+            intervals_producer = [
+                {"interval": y2 - y1, "previousWin": y1, "followingWin": y2}
+                for y1, y2 in zip(years, years[1:])
+            ]
+            for interval in intervals_producer:
+                if interval["interval"] < min_interval:
+                    min_interval = interval["interval"]
+                    intervals["min"] = [{
+                        "producer": producer,
+                        **interval
+                    }]
+                elif interval["interval"] == min_interval:
+                    intervals["min"].append({
+                        "producer": producer,
+                        **interval
+                    })
+                if interval["interval"] > max_interval:
+                    max_interval = interval["interval"]
+                    intervals["max"] = [{
+                        "producer": producer,
+                        **interval
+                    }]
+                elif interval["interval"] == max_interval:
+                    intervals["max"].append({
+                        "producer": producer,
+                        **interval
+                    })
+
+    return intervals
+
+
+./tests/test_app.py:
+import unittest
+from app import create_app
+
+class TestAPI(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app()
+        self.client = self.app.test_client()
+
+    def test_max_interval(self):
+        response = self.client.get('/producers')
+        self.assertEqual(response.status_code, 200)
+        # Adicione mais asserções conforme necessário
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+./tests/__init__.py:
+
+
+./tests/test_routes.py:
+import unittest
+from app import create_app
+from models import db, Movie
+
+class TestRoutes(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app()
+        self.client = self.app.test_client()
+
+        with self.app.app_context():
+            db.drop_all()
+            db.create_all()
+            self.populate_data()
+
+    def tearDown(self):
+        with self.app.app_context():
+            db.session.remove()
+            db.drop_all()
+
+    def populate_data(self):
+        movies = [
+            Movie(year=2008, title="Movie 1", studios="Studio 1", producers="Producer 1", winner='yes'),
+            Movie(year=2006, title="Movie 2", studios="Studio 2", producers="Producer 1", winner='yes'),
+            Movie(year=2018, title="Movie 3", studios="Studio 3", producers="Producer 2", winner='yes'),
+            Movie(year=2019, title="Movie 4", studios="Studio 4", producers="Producer 2", winner='yes'),
+            Movie(year=1900, title="Movie 5", studios="Studio 5", producers="Producer 3", winner='yes'),
+            Movie(year=1999, title="Movie 6", studios="Studio 6", producers="Producer 3", winner='yes'),
+            Movie(year=2000, title="Movie 7", studios="Studio 7", producers="Producer 4", winner='yes'),
+            Movie(year=2096, title="Movie 8", studios="Studio 8", producers="Producer 4", winner='yes')
+        ]
+
+        for movie in movies:
+            db.session.add(movie)
+        db.session.commit()
+
+    def test_producers_intervals(self):
+        response = self.client.get('/producers')
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.get_json()
+        expected_intervals = {'max': [{'followingWin': 1999, 'interval': 99, 'previousWin': 1900, 'producer': 'Producer 3'}], 
+                              'min': [{'followingWin': 2019, 'interval': 1, 'previousWin': 2018, 'producer': 'Producer 2'}]}
+        self.assertEqual(data, expected_intervals)
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+./tests/test_models.py:
+
+
+./instance/config.py:
+
+
