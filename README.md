@@ -2,6 +2,7 @@
 
 GoldenRaspberryAwards é uma aplicação que fornece informações sobre produtores de filmes vencedores do Golden Raspberry Awards, incluindo intervalos extremos de tempo entre vitórias consecutivas.
 
+
 ## Estrutura do Projeto
 
 ```plaintext
