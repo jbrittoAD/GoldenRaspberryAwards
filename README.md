@@ -144,5 +144,3 @@ Este projeto está licenciado sob os termos da licença MIT. Veja o arquivo `LIC
 **Autor:** João Carlos Britto filho
 
 **Contato:** joaocarlosbrittofilho@gmail.com
-```
-teste
