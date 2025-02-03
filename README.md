@@ -21,7 +21,6 @@ GoldenRaspberryAwards/
 │   ├── auth.py
 │   ├── __init__.py
 │   ├── main.py
-├── run.py
 ├── services
 │   ├── auth_service.py
 │   ├── __init__.py
