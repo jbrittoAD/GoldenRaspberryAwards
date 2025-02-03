@@ -63,10 +63,10 @@ GoldenRaspberryAwards/
 
 Para executar a aplicação, utilize o seguinte comando:
 ```bash
-python run.py
+python app.py
 ```
 
-A aplicação estará disponível em `http://127.0.0.1:5000`.
+A aplicação estará disponível em `[http://127.0.0.1:5000/producers]`.
 
 ## Pré testes
 Caso o banco e o modelo seja modificado, deve-se modificar o json utilizado nos testes, mais exatamente localizado em "tests/test_routes.py"
