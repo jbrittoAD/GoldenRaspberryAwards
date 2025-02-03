@@ -1,0 +1,8 @@
+{
+  "max": [
+      {"producer": "Matthew Vaughn", "interval": 13, "previousWin": 2002, "followingWin": 2015}
+  ],
+  "min": [
+      {"producer": "Bo Derek", "interval": 6, "previousWin": 1984, "followingWin": 1990}
+  ]
+}
